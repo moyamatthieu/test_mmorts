@@ -1,0 +1,20 @@
+{
+  "name": "test_mmorts",
+  "version": "1.0.0",
+  "description": "A TypeScript/Vite project for Three.js",
+  "main": "index.html",
+  "scripts": {
+    "dev": "bash dev.sh",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.162.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.182.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.0"
+  },
+  "type": "module"
+}
