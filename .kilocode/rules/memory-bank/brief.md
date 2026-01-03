@@ -1,40 +1,41 @@
-## Brief projet (MMORTS / simulation)
+# PEEJS — Brief
 
-Projet: prototype **MMORTS** (simulation/stratégie temps réel massivement multi‑joueurs) orienté **simulation** (entités, grille/cluster, rendu et UI) avec une architecture front (browser) et du calcul déporté via **Web Workers**.
+## Vision (1 phrase)
+Prototype de **MMO RTS spatial** en TypeScript/Three.js, avec **navigation fluide sans chargement** (GALAXY → SYSTEM → ORBIT → SURFACE) et **scalabilité** (beaucoup d'unités) via simulation asynchrone.
 
-### Stack
+## Objectifs produit (priorité)
+1. Navigation multi-échelle continue (pas d’écran de chargement).
+2. RTS lisible : sélection, ordres, déplacement de groupes, combat simple.
+3. Multi en **peer-to-peer** (PeerJS) pour prototyper vite la boucle “exploration → expansion → conflit”.
+4. Performance : rendu instancié + simulation hors main thread.
 
-- **TypeScript**
-- **Vite** (build + dev server)
-- **Three.js** (rendu WebGL)
-- Calcul asynchrone via **Workers** (voir `src/core/workers/*`)
-- Données partagées via **SharedArrayBuffer** (nécessite COOP/COEP)
+## Inspirations (guidelines, pas de copie)
+- Homeworld : tactique 3D, flottes/formations, lisibilité des combats, gestion de la distance.
+- “Mankind” (référence macro) : progression/économie/contrôle de zones, montée en puissance.
 
-### Lancer en local (npm)
+## Scope strict (MVP)
+- Vues : GALAXY / SYSTEM / ORBIT / SURFACE + transitions (Enter/Escape + zoom).
+- Sélection : système (GALAXY), planète/fleet (SYSTEM), cible caméra (lookAt).
+- Unités : déplacement + combat minimal + rendu instancié.
+- Réseau P2P : échange d'ordres (commandes) + snapshots ponctuels (prototype).
 
-```bash
-npm install
-npm run dev
-```
+## Hors scope (pour l’instant)
+- Anti-triche “sérieuse”, authoritative server, persistance serveur.
+- Diplomatie complexe, marché, crafting, campagne scénarisée.
+- Terrain planétaire jouable (RTS au sol) détaillé.
 
-Autres commandes utiles:
+## Contraintes techniques / principes
+- KISS/YAGNI : architecture minimale, lisible, sans duplication.
+- Source de vérité navigation : `NavigationState` ; ne pas dépendre de handles Three.js instables.
+- Simulation hors thread principal quand possible (worker + SharedArrayBuffer).
+- Rendu : Three.js via Vite, TypeScript strict.
 
-```bash
-npm run build
-npm run preview
-```
-
-### Objectifs principaux
-
-- Simuler un grand nombre d’unités/objets et leurs interactions de manière performante.
-- Séparer clairement **rendu/scene** (main thread) et **simulation** (worker) pour garder l’UI fluide.
-- Contrôler la mémoire/partage de données côté worker (buffers/structures partagées) pour éviter les copies.
-
-### Zones de code (où regarder)
-
-- `src/core/` : orchestration runtime (scène, caméra, boucle d’update, mémoire, etc.)
-  - `src/core/SceneManager.ts` : point central d’assemblage/gestion de scène.
-  - `src/core/MemoryManager.ts` : gestion mémoire/structures pour la simulation.
-  - `src/core/workers/*` : workers et mémoire partagée (simulation).
-- `src/entities/` : modèle “jeu” (grilles, champs d’étoiles, unités, coordonnées).
-- `src/ui/` : UI (widgets/overlays).
+## Ancrage code existant (référence)
+- Runtime + boucle : `SceneManager` / `IUpdatable`.
+- Navigation : `NavigationState` / `NavigationManager`.
+- Caméra : `CameraManager` (OrbitControls + `flyTo`).
+- GALAXY : `ClusterGrid` + `StarField`.
+- SYSTEM : `SolarSystem`.
+- ORBIT : `ViewEntitiesManager` (construction orbitale).
+- SURFACE : `PlanetSurface` (LOD + shader).
+- MMO perf : `SimulationWorker` + `MemoryManager` + `UnitManager`.

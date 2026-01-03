@@ -1,0 +1,18 @@
+/**
+ * Styles globaux pour PEEJS - MMO RTS Spatial
+ * 
+ * Ce fichier contient les styles de base nécessaires pour le rendu 3D plein écran.
+ * Le CSS est externalisé (au lieu d'être inline dans index.html) pour assurer
+ * la compatibilité avec le build Vite.
+ */
+
+/* Reset et styles de base pour le canvas Three.js plein écran */
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Assure que le canvas Three.js occupe tout l'espace disponible */
+canvas {
+    display: block;
+}

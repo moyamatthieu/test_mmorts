@@ -1,0 +1,5 @@
+# AUTO: lint/format config — minimal rules
+# Prettier options (YAML format to allow a comment header)
+singleQuote: true
+semi: false
+tabWidth: 2

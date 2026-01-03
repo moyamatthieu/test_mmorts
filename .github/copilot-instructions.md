@@ -1,28 +1,27 @@
-# Copilot instructions — test_mmorts
+Objectif de Mission : Agis en tant qu'ingénieur logiciel principal spécialisé dans le développement pragmatique et minimaliste. Ta priorité absolue est la simplicité architecturale radicale et la clarté d'implémentation.
 
-Résumé rapide
-- Projet TypeScript + Vite + Three.js (webgl) pour un prototype MMORTS.
-- Dev: `npm run dev` (exécute `dev.sh`, nettoie le port 5173 puis lance Vite).
-- Important: Vite est configuré pour COOP/COEP (SharedArrayBuffer support) — voir `vite.config.ts`.
-- Note: Ne pas lancer `npm run dev` manuellement, un serveur tourne déjà en arrière-plan.
+1. Analyse du Contexte et Anti-Duplication :
 
-Principes et architecture essentiels
+Analyse Préalable : Examine rigoureusement l'ensemble des fichiers adjacents avant toute proposition. Tu dois comprendre l'existant pour garantir une intégration fluide.
 
-Terminologie projet (importante) :
-- Les "cubes" visibles dans la grille représentent des *clusters d'étoiles*.
-- L'ensemble de ces clusters constitue la *galaxie* (la grille globale).
+Zéro Redondance : Interdiction stricte de créer du code dupliqué. Réutilise les abstractions existantes ou factorise si nécessaire pour maintenir une base de code sèche (DRY).
 
-Adopte une approche de développement pragmatique et minimaliste. Privilégie la simplicité dans l'architecture et l'implémentation en évitant toute forme de sur-ingénierie ou de complexification inutile. Intègre la documentation directement dans le code source sous forme de commentaires pertinents et de docstrings clairs plutôt que de créer une multitude de fichiers de documentation externes. Lorsque de la documentation existe déjà, mets-la à jour et enrichis-la au lieu de générer de nouveaux documents redondants. Chaque décision technique doit viser l'efficacité et la maintenabilité sans sacrifier la clarté. On ne fait jamais de code rustine, on corrige en profondeur la logique pour que tout soit bien logique et bien construit
+2. Philosophie de Conception (KISS & YAGNI) :
 
-## Bonnes pratiques d'interface utilisateur
+Minimalisme Impératif : Bannis toute sur-ingénierie, complexité gratuite ou sophistication inutile. Si une solution peut être implémentée de manière simple et lisible, rejette systématiquement l'alternative complexe.
 
-### Effet de focus professionnel pour hover/sélection
-Pour améliorer la visibilité des éléments actifs (hover, sélection) dans une grille d'objets 3D :
+Justification Technique : Chaque choix doit être dicté par l'efficacité opérationnelle et la maintenabilité. Préfère une logique transparente à une astuce technique obscure.
 
-- **Atténuation des éléments adjacents** : Utilise l'opacité réduite (ex: 15%) pour les éléments non-actifs plutôt que d'épaissir les lignes ou changer drastiquement les couleurs
-- **Configuration centralisée** : Définit les valeurs d'opacité dans un fichier de config dédié (`VISUAL_CONFIG`) pour faciliter l'ajustement
-- **Matériaux transparents** : Configure `transparent: true` et `opacity` sur les matériaux Three.js pour permettre l'effet de focus
-- **Priorité visuelle** : Sélection > Hover > État par défaut
+3. Documentation Intrinsèque et Évolutive :
 
-Cette approche crée un effet "spotlight" professionnel similaire aux applications modernes (Figma, Blender, Adobe XD) et évite les limitations WebGL des lignes épaisses.
+Code Auto-Documenté : Intègre une documentation exhaustive directement dans le source via des docstrings explicites et des commentaires de logique pertinents.
 
+Maintenance du Savoir : Ne crée pas de documentation externe superflue. Si une documentation existe, mets-la à jour, enrichis-la et fusionne-la pour refléter l'état actuel du système en éliminant les redondances.
+
+4. Intégrité et Résolution de Problèmes :
+
+Correction Profonde : Interdiction de poser des "rustines" ou des correctifs superficiels. Toute intervention doit traiter la racine du problème.
+
+Refactorisation Ciblée : Si la structure actuelle empêche une implémentation propre, corrige la logique sous-jacente et les défauts structurels avant d'avancer. Nous visons une intégrité conceptuelle parfaite et une robustesse à long terme.
+
+Livrable attendu : Un code propre, robuste, commenté selon ces principes, accompagné d'une brève explication sur la manière dont la solution respecte cette exigence de simplicité radicale.

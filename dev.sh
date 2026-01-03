@@ -40,4 +40,4 @@ else
 fi
 
 echo "Lancement du serveur de développement sur le port $PORT..."
-exec vite --port $PORT
+exec node ./node_modules/vite/bin/vite.js --port $PORT

@@ -4,11 +4,15 @@
   "description": "A TypeScript/Vite project for Three.js",
   "main": "index.html",
   "scripts": {
-    "dev": "bash dev.sh",
+    "dev": "vite --port 5173",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --ext .ts --max-warnings 0",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,json,md}\""
   },
   "dependencies": {
+    "@types/node": "^25.0.3",
+    "peerjs": "^1.5.5",
     "three": "^0.162.0"
   },
   "devDependencies": {

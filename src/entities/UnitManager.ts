@@ -33,6 +33,7 @@ export class UnitManager {
 
     /** Met à jour les matrices d'instances à partir du SharedArrayBuffer */
     public update(dt?: number): void {
+        void dt;
         const { posX, posY, posZ, active } = this.memory;
         let visible = 0;
 

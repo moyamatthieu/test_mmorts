@@ -40,4 +40,21 @@ export class StarField {
         // Petite rotation lente autour de l'axe Y
         this.points.rotation.y += this.rotationSpeed * dt * 60; // normaliser sur 60fps
     }
+
+    /**
+     * Ajoute des identifiants uniques aux étoiles pour faciliter leur sélection.
+     */
+    public assignStarIds(): void {
+        const positions = this.points.geometry.attributes.position;
+        for (let i = 0; i < positions.count; i++) {
+            const star = new THREE.Object3D();
+            star.position.set(
+                positions.getX(i),
+                positions.getY(i),
+                positions.getZ(i)
+            );
+            star.userData.id = i; // Identifiant unique
+            this.points.add(star);
+        }
+    }
 }

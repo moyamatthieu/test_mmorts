@@ -12,14 +12,15 @@ export class CoordinateSystem {
     constructor(size: number = 5) {
         this.axesHelper = new THREE.AxesHelper(size);
         
-        // Personnaliser les couleurs des axes
-        // L'AxesHelper contient 3 LineBasicMaterial pour les axes X, Y, Z
-        const materials = this.axesHelper.material as THREE.Material[];
+        // Personnaliser les couleurs des axes.
+        // AxesHelper.material peut être un Material unique OU un tableau selon la version Three.js.
+        const mat = this.axesHelper.material;
+        const materials = Array.isArray(mat) ? mat : [mat];
         if (materials.length >= 3) {
             (materials[0] as THREE.LineBasicMaterial).color.setHex(0xff0000); // X - Rouge
-            (materials[1] as THREE.LineBasicMaterial).color.setHex(0x00ff00); // Y - Vert  
+            (materials[1] as THREE.LineBasicMaterial).color.setHex(0x00ff00); // Y - Vert
             (materials[2] as THREE.LineBasicMaterial).color.setHex(0x0000ff); // Z - Bleu
-            
+
             // Rendre les axes semi-transparents pour ne pas gêner la visibilité
             (materials[0] as THREE.LineBasicMaterial).transparent = true;
             (materials[1] as THREE.LineBasicMaterial).transparent = true;
@@ -41,13 +42,16 @@ export class CoordinateSystem {
      * Ajuste la visibilité du repère en fonction de la distance de la caméra.
      */
     public update(dt: number, cameraPosition?: THREE.Vector3): void {
+        // dt non utilisé (fonction purement dépendante de cameraPosition), conservé pour signature IUpdatable.
+        void dt;
         if (!cameraPosition) return;
         const distance = cameraPosition.length();
 
         // Atténuer la visibilité quand on s'éloigne
         const opacity = Math.max(0.2, Math.min(0.8, 20 / distance));
 
-        const materials = this.axesHelper.material as THREE.Material[];
+        const mat = this.axesHelper.material;
+        const materials = Array.isArray(mat) ? mat : [mat];
         if (materials.length >= 3) {
             (materials[0] as THREE.LineBasicMaterial).opacity = opacity;
             (materials[1] as THREE.LineBasicMaterial).opacity = opacity;

@@ -1,14 +1,19 @@
 /**
  * Gère la mémoire partagée pour les unités en utilisant une structure SoA (Structure of Arrays).
  * Cette approche est optimisée pour le cache CPU et facilite le traitement parallèle via WebWorkers.
+ *
+ * Modification : réserve une zone de contrôle (Int32Array) au début du SAB pour la
+ * synchronisation atomique entre main thread et worker.
  */
-import { BYTES_PER_UNIT, createViews } from './workers/SharedMemory';
+
+import { BYTES_PER_UNIT, createViews, CONTROL_INT32_LENGTH } from './workers/SharedMemory';
 
 export class MemoryManager {
     public readonly buffer: SharedArrayBuffer;
     public readonly maxUnits: number;
 
-    // Vues typées pour accéder aux données
+    // Zone de contrôle exposée (Int32Array) et vues typées pour accéder aux données
+    public readonly control: Int32Array;
     public readonly posX: Float32Array;
     public readonly posY: Float32Array;
     public readonly posZ: Float32Array;
@@ -20,9 +25,12 @@ export class MemoryManager {
     constructor(maxUnits: number = 10000) {
         console.log('[MemoryManager] Initialisation...');
         this.maxUnits = maxUnits;
-        
-        // Calcul de la taille totale nécessaire
-        const totalSize = maxUnits * BYTES_PER_UNIT;
+
+        // Réserver la zone de contrôle (taille alignée Int32)
+        const controlBytes = CONTROL_INT32_LENGTH * 4;
+
+        // Calcul de la taille totale nécessaire (contrôle + données par unité)
+        const totalSize = controlBytes + maxUnits * BYTES_PER_UNIT;
         try {
             this.buffer = new SharedArrayBuffer(totalSize);
             console.log('[MemoryManager] SharedArrayBuffer créé avec succès. Taille:', totalSize);
@@ -31,8 +39,9 @@ export class MemoryManager {
             throw e;
         }
 
-        // Créer les vues via le helper centralisé
+        // Créer les vues via le helper centralisé (inclut maintenant `control`)
         const views = createViews(this.buffer, maxUnits);
+        this.control = views.control;
         this.posX = views.posX;
         this.posY = views.posY;
         this.posZ = views.posZ;

@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { GRID_CONFIG, DEBUG_CONFIG, VISUAL_CONFIG } from '../config';
+import { GRID_CONFIG, DEBUG_CONFIG } from '../config';
+import { SelectionRing } from './SelectionRing';
+import { SystemReference } from '../types/NavigationState';
 
 /**
  * Métadonnées associées à chaque soleil pour la sélection individuelle.
  */
-interface SunMetadata {
+export interface SunMetadata {
     id: string; // Identifiant unique du soleil
     name: string; // Nom généré automatiquement
     globalCoords: { gx: number; gz: number }; // Coordonnées du cluster parent
@@ -16,6 +18,7 @@ interface SunMetadata {
     color: number; // Couleur du matériau
     createdAt: number; // Timestamp de création
     clusterId: string; // ID du cluster parent
+    optimalDistance: number; // Distance optimale de zoom
 }
 
 /**
@@ -34,12 +37,12 @@ export class ClusterGrid {
     private hoveredCubeName: string | null = null;
     private selectedCubeName: string | null = null;
     private selectedSun: THREE.Mesh | null = null;
-    private selectionRing: THREE.Mesh | null = null;
+    private selectionRing: SelectionRing | null = null;
     private pickMeshes: THREE.Mesh[] = [];
     private pickGroup: THREE.Group;
     private suns: THREE.Mesh[] = []; // Array pour stocker les soleils
     private sunMetadata: Map<string, SunMetadata> = new Map(); // Métadonnées des soleils
-    
+     
     // Constantes de couleurs
     private readonly DEFAULT_COLOR = 0xffffff;
     private readonly SELECT_COLOR = 0x0066ff;
@@ -53,10 +56,10 @@ export class ClusterGrid {
         this.labelsGroup = new THREE.Group();
         this.group.add(this.labelsGroup);
         this.pickGroup = new THREE.Group();
-        
+         
         this.clusterSize = GRID_CONFIG.cubesX; // Utilise la config
         this.spacing = spacing;
-        
+         
         const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
         const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
         const material = new THREE.LineBasicMaterial({ color: 0xffffff });
@@ -78,7 +81,7 @@ export class ClusterGrid {
                 console.log(`[ClusterGrid] Matériau individu cube ${cubeEdges.name}:`, { 
                     transparent: individualMaterial.transparent, 
                     depthWrite: individualMaterial.depthWrite, 
-                    depthTest: individualMaterial.depthTest,
+                    depthTest: individualMaterial.depthTest, 
                     opacity: individualMaterial.opacity
                 });
                 const pos = this.getPosFromCoords(0, 0, lx, lz);
@@ -142,13 +145,47 @@ export class ClusterGrid {
     public getOptimalZoomDistance(sunMesh: THREE.Mesh): number {
         const metadata = this.getSunMetadataFromMesh(sunMesh);
         if (!metadata) return 2; // Distance par défaut
-        
+         
         // Distance proportionnelle à la taille et à la masse du soleil
         const baseDistance = 2;
         const sizeMultiplier = Math.max(0.5, Math.min(3, metadata.radius * 200));
         const massMultiplier = Math.max(0.8, Math.min(2, Math.log10(metadata.mass + 1)));
-        
+         
         return baseDistance * sizeMultiplier * massMultiplier;
+    }
+
+    /**
+     * Retourne le mesh d'un soleil par son ID.
+     * @param sunId ID du soleil (format: "SUN_...")
+     * @returns Mesh du soleil ou null si non trouvé
+     */
+    public getSunMeshById(sunId: string): THREE.Mesh | null {
+        return this.suns.find(s => s.name === sunId) || null;
+    }
+
+    /**
+     * Construit une SystemReference complète et validée pour un soleil donné.
+     * Centralise la logique de construction pour garantir cohérence et validation.
+     *
+     * @param sunId ID du soleil (format: "SUN_...")
+     * @returns SystemReference complète ou null si le soleil n'existe pas
+     */
+    public getSystemReference(sunId: string): SystemReference | null {
+        const metadata = this.sunMetadata.get(sunId);
+        const sunMesh = this.getSunMeshById(sunId);
+        
+        if (!metadata || !sunMesh) {
+            console.warn(`[ClusterGrid] Impossible de construire SystemReference: sunId="${sunId}", metadata=${!!metadata}, mesh=${!!sunMesh}`);
+            return null;
+        }
+        
+        // Note: Les soleils sont directement cliquables (géométrie raycastable)
+        // Pas besoin de pickMesh séparé, on réutilise sunMesh
+        return {
+            metadata,
+            sunMesh,
+            pickMesh: sunMesh
+        };
     }
 
     /**
@@ -159,6 +196,15 @@ export class ClusterGrid {
         const x = (cx * this.clusterSize + lx - (this.clusterSize / 2 - 0.5)) * this.spacing;
         const z = (cz * this.clusterSize + lz - (this.clusterSize / 2 - 0.5)) * this.spacing;
         return new THREE.Vector3(x, 0, z);
+    }
+
+    /**
+     * Retourne le centre d'un cluster (cube) à partir de ses coordonnées globales.
+     * Utilisé pour le centrage de la caméra sur double-clic.
+     */
+    public getClusterCenter(gx: number, gz: number): THREE.Vector3 | null {
+        // Les coordonnées globales sont directement les coordonnées locales dans le cluster central (cx=0, cz=0)
+        return this.getPosFromCoords(0, 0, gx, gz);
     }
 
     /**
@@ -191,7 +237,7 @@ export class ClusterGrid {
      */
     public getCoordsFromPos(pos: THREE.Vector3) {
         const s = this.clusterSize;
-        const g = this.spacing;
+        const g = this.spacing; 
 
         const totalX = Math.floor(pos.x / g + (s / 2));
         const totalZ = Math.floor(pos.z / g + (s / 2));
@@ -236,7 +282,7 @@ export class ClusterGrid {
 
         // Supprimer l'ancien anneau de sélection
         if (this.selectionRing) {
-            this.group.remove(this.selectionRing);
+            this.group.remove(this.selectionRing.getMesh());
             this.selectionRing = null;
         }
 
@@ -244,24 +290,15 @@ export class ClusterGrid {
 
         if (sun) {
             const metadata = this.getSunMetadataFromMesh(sun);
+             
+            // Utilisation de la classe SelectionRing avec les paramètres standardisés
+            const sunRadius = metadata?.radius || 0.01;
+            this.selectionRing = new SelectionRing(sunRadius * 1.30, 0.05, metadata?.color || 0x00ff00, 0.8);
             
-            // Taille de l'anneau proportionnelle au soleil
-            const ringInnerRadius = Math.max(0.05, metadata?.radius * 20 || 0.05);
-            const ringOuterRadius = ringInnerRadius * 1.4;
-            
-            const ringGeometry = new THREE.RingGeometry(ringInnerRadius, ringOuterRadius, 16);
-            const ringMaterial = new THREE.MeshBasicMaterial({
-                color: metadata?.color || 0x00ff00,
-                transparent: true,
-                opacity: 0.8,
-                side: THREE.DoubleSide
-            });
-            this.selectionRing = new THREE.Mesh(ringGeometry, ringMaterial);
-            this.selectionRing.position.copy(sun.position);
-            this.selectionRing.position.y = 0.01; // Légèrement au-dessus
-            this.selectionRing.rotation.x = -Math.PI / 2; // Horizontal
-            this.group.add(this.selectionRing);
-            
+            // Positionnement précis au centre du soleil avec alignement vertical parfait
+            this.selectionRing.setPosition(sun.position);
+            this.group.add(this.selectionRing.getMesh());
+             
             // Log des informations du soleil sélectionné
             if (metadata) {
                 console.log(`⭐ Soleil sélectionné:`, {
@@ -282,7 +319,7 @@ export class ClusterGrid {
      */
     public updateSelectionRing(dt: number): void {
         if (this.selectionRing) {
-            this.selectionRing.rotation.z += dt * 2; // Rotation lente
+            this.selectionRing.updateRotation(dt);
         }
     }
 
@@ -311,17 +348,17 @@ export class ClusterGrid {
         const clusterNames = [
             'Orion', 'Lyra', 'Cygnus', 'Andromeda', 'Pegasus', 'Aquila',
             'Vulpecula', 'Lacerta', 'Scutum', 'Sagitta', 'Delphinus', 'Equuleus'
-        ];
-        
+        ]; 
+
         const sector = sectorNames[(gx + 50) % sectorNames.length];
         const cluster = clusterNames[(gz + 50) % clusterNames.length];
         const designation = String.fromCharCode(65 + (index % 26)); // A, B, C...
-        
+         
         return `${sector}-${cluster}-${designation}`;
     }
     public selectCubeByName(cubeName: string | null): void {
         if (this.selectedCubeName === cubeName) return;
-        this.selectedCubeName = cubeName;
+        this.selectedCubeName = cubeName; 
 
         this.group.children.forEach(child => {
             if (!(child instanceof THREE.LineSegments)) return;
@@ -348,7 +385,7 @@ export class ClusterGrid {
      */
     public setHoverCubeByName(cubeName: string | null): void {
         if (this.hoveredCubeName === cubeName) return;
-        this.hoveredCubeName = cubeName;
+        this.hoveredCubeName = cubeName; 
 
         this.group.children.forEach(child => {
             if (!(child instanceof THREE.LineSegments)) return;
@@ -403,6 +440,10 @@ export class ClusterGrid {
      * @returns Nombre de soleils à générer (entre 5 et 20)
      */
     private getSunsCountForCluster(gx: number, gz: number): number {
+        // gx/gz non utilisés pour l'instant (distribution uniforme), mais gardés pour
+        // permettre une variation seed-based future par cluster sans changer l'API interne.
+        void gx;
+        void gz;
         // Variation aléatoire entre 5 et 20 soleils par cluster
         return Math.floor(Math.random() * 16) + 5;
     }
@@ -441,22 +482,22 @@ export class ClusterGrid {
             const sunMaterial = new THREE.MeshBasicMaterial({
                 color: colorVariations[colorIndex]
             });
-            
+             
             const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-            
+             
             // Position aléatoire dans les limites du cube (distribution 3D uniforme)
             const absoluteX = minX + Math.random() * (maxX - minX);
             const absoluteY = (Math.random() - 0.5) * this.spacing;
-            const absoluteZ = minZ + Math.random() * (maxZ - minZ);
-            
+            const absoluteZ = minZ + Math.random() * (maxZ - minZ); 
+             
             sun.position.set(absoluteX, absoluteY, absoluteZ);
-            
+             
             // Génération des métadonnées
             const sunId = `SUN_${gx}_${gz}_${i}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const sunName = this.generateSunName(gx, gz, i);
             const mass = Math.pow(radius * 100, 3); // Masse proportionnelle au cube du rayon
             const temperature = 3000 + Math.random() * 5000; // Température entre 3000K et 8000K
-            
+             
             const metadata: SunMetadata = {
                 id: sunId,
                 name: sunName,
@@ -476,16 +517,20 @@ export class ClusterGrid {
                 temperature: temperature,
                 color: colorVariations[colorIndex],
                 createdAt: Date.now(),
-                clusterId: `C[${gx}:${gz}]`
-            };
+                clusterId: `C[${gx}:${gz}]`,
+                optimalDistance: 2 // Valeur par défaut, sera affinée si besoin
+            }; 
+             
+            // Calculer la distance optimale réelle
+            metadata.optimalDistance = this.getOptimalZoomDistance(sun);
             
             sun.name = sunId; // Stocker l'ID dans le mesh
             sun.userData = { metadata }; // Associer les métadonnées au mesh
-            
+             
             this.suns.push(sun);
             this.sunMetadata.set(sunId, metadata);
-            this.group.add(sun);
-            
+            this.group.add(sun); 
+             
             // Log de validation pour vérifier la distribution 3D et les métadonnées
             console.log(`[ClusterGrid] Soleil généré:`, {
                 id: sunId,
